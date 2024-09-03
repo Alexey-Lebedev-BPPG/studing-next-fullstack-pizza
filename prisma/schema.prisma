@@ -1,36 +1,48 @@
+// в этом файле описываем схемы наших таблиц дл базы данных
+// подключаем клиента призмы для приложения
 generator client {
     provider = "prisma-client-js"
 }
 
+// указываем конфиг для призмы
 datasource db {
     provider  = "postgresql"
-    url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+    url       = env("POSTGRES_URL") // uses connection pooling
     directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
 }
 
+// создаем первую схему юзера
 model User {
+    // указываем айди, которое будет числом, будет уникальным и автоматически будет инкрементироваться
     id Int @id @default(autoincrement())
 
-    fullName String
-    email    String    @unique
-    password String
-    role     UserRole  @default(USER)
-    verified DateTime?
-
-    provider   String?
-    providerId String?
-
+    fullName         String
+    // делаем email уникальным
+    email            String            @unique
+    password         String
+    // для роли указываем типизацию енама (написан в конце) и ставим значение по умолчанию
+    role             UserRole          @default(USER)
+    verified         DateTime?
+    // указывает, через какую социальную сеть юзер авторизовался
+    provider         String?
+    providerId       String?
+    // у юзера может быть корзина
     cart             Cart?
+    // и у юзера может быть несколько заказов
     orders           Order[]
+    // связываем верификационный кодс юзером
     verificationCode VerificationCode?
 
+    // указваем дату создания (практичеки для каждой сущности указывается) и как дефолтное значение делаем дату в момент создания
     createdAt DateTime @default(now())
+    // указываем дату обновления и ставим дату обновления
     updatedAt DateTime @updatedAt
 }
 
 model Category {
     id       Int       @id @default(autoincrement())
     name     String    @unique
+    // связываем категории с продуктами (one-to-many)
     products Product[]
 
     createdAt DateTime @default(now())
@@ -40,12 +52,14 @@ model Category {
 model Product {
     id Int @id @default(autoincrement())
 
-    name     String
-    imageUrl String
-
+    name        String
+    imageUrl    String
+    // связываем продукты с ингредиентами (many-to-many)
     ingredients Ingredient[]
+    // связываем продукты с вариациями (one-to-many)
     items       ProductItem[]
 
+    // связываем продукты с категориями. Для этого говорим, что у продукта будет поле categoryId, которое будет указывать на поле id в категориях
     category   Category @relation(fields: [categoryId], references: [id])
     categoryId Int
 
@@ -53,100 +67,112 @@ model Product {
     updatedAt DateTime @updatedAt
 }
 
+// схема, отражаюзая вариации продуктов (тип продукта, размер его и цена). При этом к некоторых продуктов может быть только цена, а дургих характеристик нет
 model ProductItem {
     id Int @id @default(autoincrement())
 
     price     Int
     size      Int?
     pizzaType Int?
-
+    // связываем продукты с продуктами корзины
     cartItems CartItem[]
-
-    product   Product @relation(fields: [productId], references: [id])
+    // связываем вариации продуктов с продуктами (one-to-many)
+    product   Product    @relation(fields: [productId], references: [id])
     productId Int
 }
 
+// создаем схему ингредиентов
 model Ingredient {
     id Int @id @default(autoincrement())
 
-    name     String
-    price    Int
-    imageUrl String
-
+    name      String
+    price     Int
+    imageUrl  String
+    // связываем ингредиенты с продуктами (many-to-many). указываем это здесь и аналогично делаем для продуктов
     products  Product[]
+    // связываем ингредиенты с продуктами корзины
     cartItems CartItem[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 }
 
+// создаем модель корзины
 model Cart {
-    id Int @id @default(autoincrement())
-
+    id     Int   @id @default(autoincrement())
+    // связываем корзину с конкретным юзером (one-to-many), если он был авторизован (поэтому эти свойства не обязательны)
     user   User? @relation(fields: [userId], references: [id])
     userId Int?  @unique
 
+    // связываем проудкты корзины с корзиной
     items CartItem[]
 
-    token String
-
-    totalAmount Int @default(0)
+    // если пользователь не авторизован, то привязываем корзину к токену. При этом этот токен бужет и для авторизованного и не авторизовыванного юзера
+    token       String
+    // общая стоимсоть корзины
+    totalAmount Int    @default(0)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 }
 
+// создаем модель продуктов, которые хранятнся в корзине
 model CartItem {
-    id Int @id @default(autoincrement())
-
-    cart   Cart @relation(fields: [cartId], references: [id])
-    cartId Int
-
-    productItem   ProductItem @relation(fields: [productItemId], references: [id])
+    id            Int          @id @default(autoincrement())
+    // продукт каорзины привязывается к определенной корзине (one-to-many)
+    cart          Cart         @relation(fields: [cartId], references: [id])
+    cartId        Int
+    // продукт корзины связывается с конкретным продуктом (one-to-many)
+    productItem   ProductItem  @relation(fields: [productItemId], references: [id])
     productItemId Int
-
-    quantity Int @default(1)
-
-    ingredients Ingredient[]
+    // количество определенного вида товара в корзине
+    quantity      Int          @default(1)
+    // дополнительно связываем с ингредиентами.это для того, чтоб помимо ингредиентов, которые есть в продукте, мы могли в еорзине оавить дополнительные ингредиенты
+    ingredients   Ingredient[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 }
 
+// создаем модель заказа
 model Order {
     id Int @id @default(autoincrement())
 
-    user   User? @relation(fields: [userId], references: [id])
-    userId Int?
-
-    token String
-
+    // связываем заказ с пользователем
+    user        User?       @relation(fields: [userId], references: [id])
+    userId      Int?
+    // если пользователь не авторизован, то свзываем с токеном заказ
+    token       String
+    // стоимсоть заказа
     totalAmount Int
+    // статус заказа
     status      OrderStatus
+    // айди заказа на уровне сервиса оплат
     paymentId   String?
-
-    items Json
-
-    fullName String
-    email    String
-    phone    String
-    address  String
-    comment  String?
+    // список товаров в формате JSON
+    items       Json
+    // данные получателя заказа (может не совпадать с данными юзера)
+    fullName    String
+    email       String
+    phone       String
+    address     String
+    comment     String?
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 }
 
+// создаем модель верификационного кода, который будет подтверждать зарегистрированного юзера
 model VerificationCode {
-    id Int @id @default(autoincrement())
-
-    user   User @relation(fields: [userId], references: [id])
-    userId Int  @unique
-
-    code String
-
+    id        Int      @id @default(autoincrement())
+    // свзываем код с юзером
+    user      User     @relation(fields: [userId], references: [id])
+    userId    Int      @unique
+    // номер кода
+    code      String   @unique
     createdAt DateTime @default(now())
 
+    // вариант указания уникальности для группы полей. При этом проверяется уникальность первого поля И второго поля. Если же мы укажем рядом с полями, то будет проверять уникальность первого поля ИЛИ второго поля
     @@unique([userId, code])
 }
 
@@ -170,13 +196,17 @@ model StoryItem {
     createdAt DateTime @default(now())
 }
 
+//  енам для статуса заказов
 enum OrderStatus {
     PENDING
     SUCCEEDED
     CANCELLED
 }
 
+// енам дляроли пользователя
 enum UserRole {
     USER
     ADMIN
 }
+
+// после каких-либо изменений в этом файле, необходимо сделать пуш изменений в базу (npm run prisma:push)

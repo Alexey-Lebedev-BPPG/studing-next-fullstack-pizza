@@ -1,12 +1,15 @@
-import { Prisma } from '@prisma/client';
-import { categories, _ingredients, products } from './constants';
-import { prisma } from './prisma-client';
-import { hashSync } from 'bcrypt';
+// предназначен для того, чтоб заполнить БД базовыми данными (сгенерировать тестовые данные)
+import {Prisma} from '@prisma/client';
+import {categories, _ingredients, products} from './constants';
+import {prisma} from './prisma-client';
+import {hashSync} from 'bcrypt';
 
+// функция генерации случайного числа в диапазоне
 const randomDecimalNumber = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min) * 10 + min * 10) / 10;
 };
 
+// функция генерации продукта с определенными вариациями
 const generateProductItem = ({
   productId,
   pizzaType,
@@ -21,10 +24,13 @@ const generateProductItem = ({
     price: randomDecimalNumber(190, 600),
     pizzaType,
     size,
+    // типизация того, что я могу передавать для продукта с вариациями
   } as Prisma.ProductItemUncheckedCreateInput;
 };
 
+// функция генерирования данных
 async function up() {
+  // создаем несколько юзеров
   await prisma.user.createMany({
     data: [
       {
@@ -43,19 +49,14 @@ async function up() {
       },
     ],
   });
+  // аналогичным образом наполняем нашу базу другими данными (некоторые константы были выведены в соседний файл для удобства)
+  await prisma.category.createMany({data: categories});
 
-  await prisma.category.createMany({
-    data: categories,
-  });
+  await prisma.ingredient.createMany({data: _ingredients});
 
-  await prisma.ingredient.createMany({
-    data: _ingredients,
-  });
+  await prisma.product.createMany({data: products});
 
-  await prisma.product.createMany({
-    data: products,
-  });
-
+  // пиццы создаем отдельно, потому что к ним должны быть привязаны вариации
   const pizza1 = await prisma.product.create({
     data: {
       name: 'Пепперони фреш',
@@ -92,70 +93,64 @@ async function up() {
     },
   });
 
+  // создаем продукты с привязкой вариаций
   await prisma.productItem.createMany({
     data: [
       // Пицца "Пепперони фреш"
-      generateProductItem({ productId: pizza1.id, pizzaType: 1, size: 20 }),
-      generateProductItem({ productId: pizza1.id, pizzaType: 2, size: 30 }),
-      generateProductItem({ productId: pizza1.id, pizzaType: 2, size: 40 }),
+      generateProductItem({productId: pizza1.id, pizzaType: 1, size: 20}),
+      generateProductItem({productId: pizza1.id, pizzaType: 2, size: 30}),
+      generateProductItem({productId: pizza1.id, pizzaType: 2, size: 40}),
 
       // Пицца "Сырная"
-      generateProductItem({ productId: pizza2.id, pizzaType: 1, size: 20 }),
-      generateProductItem({ productId: pizza2.id, pizzaType: 1, size: 30 }),
-      generateProductItem({ productId: pizza2.id, pizzaType: 1, size: 40 }),
-      generateProductItem({ productId: pizza2.id, pizzaType: 2, size: 20 }),
-      generateProductItem({ productId: pizza2.id, pizzaType: 2, size: 30 }),
-      generateProductItem({ productId: pizza2.id, pizzaType: 2, size: 40 }),
+      generateProductItem({productId: pizza2.id, pizzaType: 1, size: 20}),
+      generateProductItem({productId: pizza2.id, pizzaType: 1, size: 30}),
+      generateProductItem({productId: pizza2.id, pizzaType: 1, size: 40}),
+      generateProductItem({productId: pizza2.id, pizzaType: 2, size: 20}),
+      generateProductItem({productId: pizza2.id, pizzaType: 2, size: 30}),
+      generateProductItem({productId: pizza2.id, pizzaType: 2, size: 40}),
 
       // Пицца "Чоризо фреш"
-      generateProductItem({ productId: pizza3.id, pizzaType: 1, size: 20 }),
-      generateProductItem({ productId: pizza3.id, pizzaType: 2, size: 30 }),
-      generateProductItem({ productId: pizza3.id, pizzaType: 2, size: 40 }),
+      generateProductItem({productId: pizza3.id, pizzaType: 1, size: 20}),
+      generateProductItem({productId: pizza3.id, pizzaType: 2, size: 30}),
+      generateProductItem({productId: pizza3.id, pizzaType: 2, size: 40}),
 
       // Остальные продукты
-      generateProductItem({ productId: 1 }),
-      generateProductItem({ productId: 2 }),
-      generateProductItem({ productId: 3 }),
-      generateProductItem({ productId: 4 }),
-      generateProductItem({ productId: 5 }),
-      generateProductItem({ productId: 6 }),
-      generateProductItem({ productId: 7 }),
-      generateProductItem({ productId: 8 }),
-      generateProductItem({ productId: 9 }),
-      generateProductItem({ productId: 10 }),
-      generateProductItem({ productId: 11 }),
-      generateProductItem({ productId: 12 }),
-      generateProductItem({ productId: 13 }),
-      generateProductItem({ productId: 14 }),
-      generateProductItem({ productId: 15 }),
-      generateProductItem({ productId: 16 }),
-      generateProductItem({ productId: 17 }),
+      generateProductItem({productId: 1}),
+      generateProductItem({productId: 2}),
+      generateProductItem({productId: 3}),
+      generateProductItem({productId: 4}),
+      generateProductItem({productId: 5}),
+      generateProductItem({productId: 6}),
+      generateProductItem({productId: 7}),
+      generateProductItem({productId: 8}),
+      generateProductItem({productId: 9}),
+      generateProductItem({productId: 10}),
+      generateProductItem({productId: 11}),
+      generateProductItem({productId: 12}),
+      generateProductItem({productId: 13}),
+      generateProductItem({productId: 14}),
+      generateProductItem({productId: 15}),
+      generateProductItem({productId: 16}),
+      generateProductItem({productId: 17}),
     ],
   });
 
+  // создаем пару корзин для разных юзеров
   await prisma.cart.createMany({
     data: [
-      {
-        userId: 1,
-        totalAmount: 0,
-        token: '11111',
-      },
-      {
-        userId: 2,
-        totalAmount: 0,
-        token: '222222',
-      },
+      {userId: 1, totalAmount: 0, token: '11111'},
+      {userId: 2, totalAmount: 0, token: '222222'},
     ],
   });
 
+  // добавляем в первую корзину один товар
   await prisma.cartItem.create({
     data: {
       productItemId: 1,
       cartId: 1,
       quantity: 2,
-      ingredients: {
-        connect: [{ id: 1 }, { id: 2 }, { id: 3 }],
-      },
+      // привязываем к товару в корзине определенные ингредиенты
+      ingredients: {connect: [{id: 1}, {id: 2}, {id: 3}]},
     },
   });
 
@@ -219,8 +214,14 @@ async function up() {
   });
 }
 
+// функция очисти данных перед генерацией
 async function down() {
+  // можно указать так:
+  // await prisma.user.deleteMany({});
+  // но тогда все юзеры в базе данных очистятся, одна останутся уникальные айди. Это приведет к тому, что создав 2 юзера, потом удалив их, снова создав одно юзера, ему будет присвоен номер 3, а не снова 1.
+  // поэтому напишем удаление SQL синтаксисом. Для этого воспользуемся функцией prisma.$executeRaw
   await prisma.$executeRaw`TRUNCATE TABLE "User" RESTART IDENTITY CASCADE`;
+  // аналогично делаем удаление для других данных
   await prisma.$executeRaw`TRUNCATE TABLE "Category" RESTART IDENTITY CASCADE`;
   await prisma.$executeRaw`TRUNCATE TABLE "Cart" RESTART IDENTITY CASCADE`;
   await prisma.$executeRaw`TRUNCATE TABLE "CartItem" RESTART IDENTITY CASCADE`;
@@ -229,6 +230,7 @@ async function down() {
   await prisma.$executeRaw`TRUNCATE TABLE "ProductItem" RESTART IDENTITY CASCADE`;
 }
 
+// главная функция для генерации данных
 async function main() {
   try {
     await down();
@@ -237,12 +239,14 @@ async function main() {
     console.error(e);
   }
 }
-
+// вызываем главную функцию
 main()
   .then(async () => {
+    // если ответ успешен, то закрываем соединение с базой
     await prisma.$disconnect();
   })
   .catch(async (e) => {
+    // если ответ отрицательный, то закрываем соединение с базой и завершаем процесс
     console.error(e);
     await prisma.$disconnect();
     process.exit(1);
