@@ -21,9 +21,12 @@ export const findPizzas = async (params: GetSearchParams) => {
   const minPrice = Number(params.priceFrom) || DEFAULT_MIN_PRICE;
   const maxPrice = Number(params.priceTo) || DEFAULT_MAX_PRICE;
 
+  // получаем категории
   const categories = await prisma.category.findMany({
+    // включаем поле продуктов для категорий
     include: {
       products: {
+        // при этом сортируем их
         orderBy: {
           id: 'desc',
         },
@@ -52,6 +55,7 @@ export const findPizzas = async (params: GetSearchParams) => {
             },
           },
         },
+        // продукты должны включать ингредиенты
         include: {
           ingredients: true,
           items: {
